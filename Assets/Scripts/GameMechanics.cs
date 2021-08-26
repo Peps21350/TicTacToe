@@ -1,12 +1,11 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class GameMechanics : MonoBehaviour
 {
-    public static GameMechanics instance = null;
+    public static GameMechanics instance;
     [SerializeField] private GameObject choose_buttons;
     [SerializeField] private GameObject game_buttons;
     [SerializeField] private GameObject menu_buttons;
@@ -15,27 +14,38 @@ public class GameMechanics : MonoBehaviour
     public Sprite[] sprites_for_fields;
     public List<int> marked_space = new List<int>();
 
-    [NonSerialized] public static bool player_turn = true;
+    [NonSerialized] public static bool player_turn;
+    
+    public static bool is_restart;
+    public static int Player;//якщо обрано нулик, тоді 0. Якщо хрестик, тоді 1.
+    private static int PC;
 
-    public static int Player = 0;//якщо обрано нулик, тоді 0. Якщо хрестик, тоді 1.
-    private static int PC = 0;
-
-    public static bool state_turn = false;
+    public static bool state_move_PC = true;
+    public static bool is_draw;
+    private static bool victory_status;
+    
     private bool end_game = false;
-
-    public void ChooseCross()
+    
+    public void RestartGame()
     {
-        Player = 1;
-        choose_buttons.SetActive(false);
-        game_buttons.SetActive(true);
-        curtain.SetActive(false);
+        menu_buttons.SetActive(false);
+        choose_buttons.SetActive(true);
     }
 
     private void Start()
     {
-        if (instance == null)
-            instance = this;
+        Player = 0;
+        PC = 0;
         
+        if (instance == null)
+             instance = this;
+
+        if (is_restart)
+         {
+             RestartGame();
+             is_restart = false;
+         }
+         
         if (game_elements != null)
         {
             foreach (var fields in game_elements)
@@ -43,11 +53,19 @@ public class GameMechanics : MonoBehaviour
                 fields.GetComponent<Image>().sprite = sprites_for_fields[2];
             }
         }
-
+        
         for (int i = 0; i < 9; i++)
         {
             marked_space.Add(-20);
         }
+    }
+    
+    public void ChooseCross()
+    {
+        Player = 1;
+        choose_buttons.SetActive(false);
+        game_buttons.SetActive(true);
+        curtain.SetActive(false);
     }
 
     public void ChooseZero()
@@ -68,14 +86,25 @@ public class GameMechanics : MonoBehaviour
     {
         Application.Quit();
     }
-
-
-    private void PCMove(bool state)
+    
+    private void PCMove(bool state_turn)
     {
-        // можна генерити рандомне число і перевіряти, чи дане місце не зайняте
         int position = 0;
-        if (state)
+        if (state_turn)
         {
+            /*for (int i = 0; i < marked_space.Count; i++)
+            {
+                int rand_positions = Random.Range(0, 9);
+                if (game_elements[rand_positions].GetComponent<Image>().sprite != sprites_for_fields[Player] && game_elements[rand_positions].GetComponent<Image>().sprite != sprites_for_fields[PC])
+                {
+                    game_elements[rand_positions].GetComponent<Image>().sprite = sprites_for_fields[PC];
+                    game_elements[rand_positions].GetComponent<Button>().interactable = false;
+                    marked_space.RemoveAt(rand_positions);
+                    marked_space.Insert(rand_positions,PC);
+                    WinCheck();
+                    break;
+                }
+            }*/
             foreach (var fields in game_elements)
             {
                 if (fields.GetComponent<Image>().sprite != sprites_for_fields[Player] && fields.GetComponent<Image>().sprite != sprites_for_fields[PC])
@@ -91,11 +120,40 @@ public class GameMechanics : MonoBehaviour
             }
         }
 
-        state_turn = false;
+        state_move_PC = false;
         player_turn = true;
     }
+    
+    public void ChangeImageOnFieldsByPlayer(Button button)
+    {
+        int position_button = 0;
+        int counter = 0;
+        Image my_image = button.GetComponent<Image>();
+        if (player_turn)
+        {
+            switch (Player)
+            {
+                case 0: my_image.sprite = sprites_for_fields[0]; break; 
+                case 1: my_image.sprite = sprites_for_fields[1]; break;
+            }
+        }
 
+        foreach (var fields in game_elements)
+        {
+            if (fields.name == button.name)
+            {
+                position_button = counter;
+            }
 
+            counter++;
+        }
+        marked_space.RemoveAt(position_button);
+        marked_space.Insert(position_button,Player);
+        button.interactable = false;
+        WinCheck();
+        player_turn = false;
+    }
+    
     public void WinCheck()
     {
         int win_variant1 = marked_space[0] + marked_space[1] + marked_space[2];
@@ -107,7 +165,7 @@ public class GameMechanics : MonoBehaviour
         int win_variant7 = marked_space[1] + marked_space[4] + marked_space[7];
         int win_variant8 = marked_space[2] + marked_space[5] + marked_space[8];
 
-        var variants = new int[]
+        var variants = new[]
         {
             win_variant1, win_variant2, win_variant3, win_variant4, win_variant5, win_variant6, win_variant7,
             win_variant8
@@ -118,44 +176,49 @@ public class GameMechanics : MonoBehaviour
             {
                 Debug.Log("Player won");
                 curtain.SetActive(true);
-                state_turn = false;
-                //end_game = true;
+                state_move_PC = false;
+                GameUI.instance_UI.OpenGUI(true);
+                victory_status = true;
+                is_draw = false;
                 break;
             }
 
-            if (variants[i] == PC)
+            if (variants[i] == 3 * PC)
             {
                 Debug.Log("PC won");
                 curtain.SetActive(true);
-                //end_game = true;
+                GameUI.instance_UI.OpenGUI(false);
+                victory_status = true;
+                is_draw = false;
                 break;
             }
-            state_turn = true;
-            
+            state_move_PC = true;
         }
-        DrawCheck();
+        DrawCheck(victory_status);
     }
 
-    public void DrawCheck()
+    public void DrawCheck(bool victory_status)
     {
-        int counter = 0;
-        //if (end_game != false) return;
+        int counter_marked_fields = 0;
         foreach (var marked_fields in marked_space)
         {
             if (marked_fields == -20 ) 
                 break;
-            if (marked_fields != -20 && counter == 8)
+            if (marked_fields != -20 && counter_marked_fields == 8 && victory_status == false)
+            {
+                //WinCheck();
                 Debug.Log("Draw");
-            counter++;
+                is_draw = true;
+                GameUI.instance_UI.OpenGUI(false);
+                break;
+            }
+            counter_marked_fields++;
         }
     }
-
-
-
-    // Update is called once per frame
+    
     void Update()
     {
-        if(!player_turn)
-            PCMove(state_turn);
+        if(player_turn == false)
+            PCMove(state_move_PC);
     }
 }
