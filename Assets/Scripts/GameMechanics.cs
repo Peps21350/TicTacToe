@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using Random = UnityEngine.Random;
 
 public class GameMechanics : MonoBehaviour
 {
@@ -20,9 +21,9 @@ public class GameMechanics : MonoBehaviour
     public static int Player;//якщо обрано нулик, тоді 0. Якщо хрестик, тоді 1.
     private static int PC;
 
-    public static bool state_move_PC = true;
+    public static bool state_move_PC = false;
     public static bool is_draw;
-    private static bool victory_status;
+    private static bool victory_status = false;
     
     private bool end_game = false;
     
@@ -66,6 +67,8 @@ public class GameMechanics : MonoBehaviour
         choose_buttons.SetActive(false);
         game_buttons.SetActive(true);
         curtain.SetActive(false);
+        player_turn = false;
+        state_move_PC = true;
     }
 
     public void ChooseZero()
@@ -74,6 +77,8 @@ public class GameMechanics : MonoBehaviour
         choose_buttons.SetActive(false);
         game_buttons.SetActive(true);
         curtain.SetActive(false);
+        player_turn = false;
+        state_move_PC = true;
     }
 
     public void LaunchGame()
@@ -89,13 +94,13 @@ public class GameMechanics : MonoBehaviour
     
     private void PCMove(bool state_turn)
     {
-        int position = 0;
+        //int position = 0;
         if (state_turn)
         {
-            /*for (int i = 0; i < marked_space.Count; i++)
+            for (int i = 0; i < 100; i++)
             {
                 int rand_positions = Random.Range(0, 9);
-                if (game_elements[rand_positions].GetComponent<Image>().sprite != sprites_for_fields[Player] && game_elements[rand_positions].GetComponent<Image>().sprite != sprites_for_fields[PC])
+                if (game_elements[rand_positions].GetComponent<Image>().sprite == sprites_for_fields[2])
                 {
                     game_elements[rand_positions].GetComponent<Image>().sprite = sprites_for_fields[PC];
                     game_elements[rand_positions].GetComponent<Button>().interactable = false;
@@ -104,8 +109,8 @@ public class GameMechanics : MonoBehaviour
                     WinCheck();
                     break;
                 }
-            }*/
-            foreach (var fields in game_elements)
+            }
+            /*foreach (var fields in game_elements)
             {
                 if (fields.GetComponent<Image>().sprite != sprites_for_fields[Player] && fields.GetComponent<Image>().sprite != sprites_for_fields[PC])
                 {
@@ -117,7 +122,7 @@ public class GameMechanics : MonoBehaviour
                     break;
                 }
                 position++;
-            }
+            }*/
         }
 
         state_move_PC = false;
@@ -136,22 +141,21 @@ public class GameMechanics : MonoBehaviour
                 case 0: my_image.sprite = sprites_for_fields[0]; break; 
                 case 1: my_image.sprite = sprites_for_fields[1]; break;
             }
-        }
-
-        foreach (var fields in game_elements)
-        {
-            if (fields.name == button.name)
+            foreach (var fields in game_elements)
             {
-                position_button = counter;
+                if (fields.name == button.name)
+                {
+                    position_button = counter;
+                }
+                counter++;
             }
-
-            counter++;
+            marked_space.RemoveAt(position_button);
+            marked_space.Insert(position_button,Player);
+            button.interactable = false;
+            WinCheck();
+            player_turn = false;
+            state_move_PC = true;
         }
-        marked_space.RemoveAt(position_button);
-        marked_space.Insert(position_button,Player);
-        button.interactable = false;
-        WinCheck();
-        player_turn = false;
     }
     
     public void WinCheck()
@@ -165,14 +169,14 @@ public class GameMechanics : MonoBehaviour
         int win_variant7 = marked_space[1] + marked_space[4] + marked_space[7];
         int win_variant8 = marked_space[2] + marked_space[5] + marked_space[8];
 
-        var variants = new[]
+        var win_variants = new[]
         {
             win_variant1, win_variant2, win_variant3, win_variant4, win_variant5, win_variant6, win_variant7,
             win_variant8
         };
-        for (int i = 0; i < variants.Length; i++)
+        for (int i = 0; i < win_variants.Length; i++)
         {
-            if (variants[i] == 3*Player)
+            if (win_variants[i] == 3*Player)
             {
                 Debug.Log("Player won");
                 curtain.SetActive(true);
@@ -183,7 +187,7 @@ public class GameMechanics : MonoBehaviour
                 break;
             }
 
-            if (variants[i] == 3 * PC)
+            if (win_variants[i] == 3 * PC)
             {
                 Debug.Log("PC won");
                 curtain.SetActive(true);
@@ -192,7 +196,6 @@ public class GameMechanics : MonoBehaviour
                 is_draw = false;
                 break;
             }
-            state_move_PC = true;
         }
         DrawCheck(victory_status);
     }
@@ -202,21 +205,23 @@ public class GameMechanics : MonoBehaviour
         int counter_marked_fields = 0;
         foreach (var marked_fields in marked_space)
         {
-            if (marked_fields == -20 ) 
-                break;
-            if (marked_fields != -20 && counter_marked_fields == 8 && victory_status == false)
+            if (marked_fields != -20)
             {
-                //WinCheck();
-                Debug.Log("Draw");
-                is_draw = true;
-                GameUI.instance_UI.OpenGUI(false);
-                break;
+                counter_marked_fields++;
             }
-            counter_marked_fields++;
+        }
+
+        if (counter_marked_fields == 9 && victory_status == false)
+        {
+            Debug.Log("Draw");
+            is_draw = true;
+            GameUI.instance_UI.OpenGUI(false);
+            player_turn = false;
+            state_move_PC = false;
         }
     }
     
-    void Update()
+    void FixedUpdate()
     {
         if(player_turn == false)
             PCMove(state_move_PC);
