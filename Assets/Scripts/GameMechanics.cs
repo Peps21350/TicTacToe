@@ -6,46 +6,47 @@ using Random = UnityEngine.Random;
 
 public class GameMechanics : MonoBehaviour
 {
-    public static GameMechanics instance;
-    [SerializeField] private GameObject choose_buttons;
-    [SerializeField] private GameObject game_buttons;
-    [SerializeField] private GameObject menu_buttons;
+    [SerializeField] private GameObject choose_button;
+    [SerializeField] private GameObject game_button;
+    [SerializeField] private GameObject menu_button;
     [SerializeField] private GameObject curtain;
-    public GameObject[] game_elements;
-    public Sprite[] sprites_for_fields;
-    public List<int> marked_space = new List<int>();
+    [SerializeField] private GameObject[] game_elements;
+    [SerializeField] private Sprite[] sprites_for_fields;
+    private List<int> _markedSpace = new List<int>();
+    [SerializeField] private GameUI game_ui;
 
-    [NonSerialized] public static bool player_turn;
-    
-    public static bool is_restart;
-    public static int Player;//якщо обрано нулик, тоді 0. Якщо хрестик, тоді 1.
-    private static int PC;
+    private static bool s_playerTurn = true;
 
-    public static bool state_move_PC = false;
-    public static bool is_draw;
-    private static bool victory_status = false;
+    public static bool IsRestart;
+    private bool _gameOver = false;
+    public static int Player;
+    private static int s_pc;
     
-    private bool end_game = false;
+    public static bool IsDraw;
+    private static bool s_victoryStatus = false;
+    private const int _CountGameFields = 9;
+    private const int _NumberToWriteForFields = -20;
+    private const int _NumberLapsCycle = 100;
+    private const int _CountFieldsForWin = 3;
+    
     
     public void RestartGame()
     {
-        menu_buttons.SetActive(false);
-        choose_buttons.SetActive(true);
+        menu_button.SetActive(false);
+        choose_button.SetActive(true);
     }
 
     private void Start()
     {
         Player = 0;
-        PC = 0;
+        s_pc = 0;
+        s_victoryStatus = false;
         
-        if (instance == null)
-             instance = this;
-
-        if (is_restart)
-         {
-             RestartGame();
-             is_restart = false;
-         }
+        if (IsRestart)
+        {
+            RestartGame();
+            IsRestart = false;
+        }
          
         if (game_elements != null)
         {
@@ -55,36 +56,34 @@ public class GameMechanics : MonoBehaviour
             }
         }
         
-        for (int i = 0; i < 9; i++)
+        for (int i = 0; i < _CountGameFields; i++)
         {
-            marked_space.Add(-20);
+            _markedSpace.Add(_NumberToWriteForFields);
         }
     }
     
     public void ChooseCross()
     {
         Player = 1;
-        choose_buttons.SetActive(false);
-        game_buttons.SetActive(true);
+        choose_button.SetActive(false);
+        game_button.SetActive(true);
         curtain.SetActive(false);
-        player_turn = false;
-        state_move_PC = true;
+        s_playerTurn = false;
     }
 
     public void ChooseZero()
     {
-        PC = 1;
-        choose_buttons.SetActive(false);
-        game_buttons.SetActive(true);
+        s_pc = 1;
+        choose_button.SetActive(false);
+        game_button.SetActive(true);
         curtain.SetActive(false);
-        player_turn = false;
-        state_move_PC = true;
+        s_playerTurn = false;
     }
 
     public void LaunchGame()
     {
-        menu_buttons.SetActive(false);
-        choose_buttons.SetActive(true);
+        menu_button.SetActive(false);
+        choose_button.SetActive(true);
     }
 
     public void ClosingGame()
@@ -92,138 +91,121 @@ public class GameMechanics : MonoBehaviour
         Application.Quit();
     }
     
-    private void PCMove(bool state_turn)
+    private void PCMove(bool stateTurn)
     {
-        //int position = 0;
-        if (state_turn)
+        if (stateTurn == false && _gameOver == false)
         {
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < _NumberLapsCycle; i++)
             {
-                int rand_positions = Random.Range(0, 9);
-                if (game_elements[rand_positions].GetComponent<Image>().sprite == sprites_for_fields[2])
+                int randPositions = Random.Range(0, _CountGameFields);
+                if (game_elements[randPositions].GetComponent<Image>().sprite == sprites_for_fields[2])
                 {
-                    game_elements[rand_positions].GetComponent<Image>().sprite = sprites_for_fields[PC];
-                    game_elements[rand_positions].GetComponent<Button>().interactable = false;
-                    marked_space.RemoveAt(rand_positions);
-                    marked_space.Insert(rand_positions,PC);
+                    game_elements[randPositions].GetComponent<Image>().sprite = sprites_for_fields[s_pc];
+                    game_elements[randPositions].GetComponent<Button>().interactable = false;
+                    _markedSpace.RemoveAt(randPositions);
+                    _markedSpace.Insert(randPositions,s_pc);
                     WinCheck();
                     break;
                 }
             }
-            /*foreach (var fields in game_elements)
-            {
-                if (fields.GetComponent<Image>().sprite != sprites_for_fields[Player] && fields.GetComponent<Image>().sprite != sprites_for_fields[PC])
-                {
-                    fields.GetComponent<Image>().sprite = sprites_for_fields[PC];
-                    fields.GetComponent<Button>().interactable = false;
-                    marked_space.RemoveAt(position);
-                    marked_space.Insert(position,PC);
-                    WinCheck();
-                    break;
-                }
-                position++;
-            }*/
         }
-
-        state_move_PC = false;
-        player_turn = true;
+        s_playerTurn = true;
     }
     
     public void ChangeImageOnFieldsByPlayer(Button button)
     {
-        int position_button = 0;
+        int positionButton = 0;
         int counter = 0;
-        Image my_image = button.GetComponent<Image>();
-        if (player_turn)
+        Image myImage = button.GetComponent<Image>();
+        if (s_playerTurn)
         {
             switch (Player)
             {
-                case 0: my_image.sprite = sprites_for_fields[0]; break; 
-                case 1: my_image.sprite = sprites_for_fields[1]; break;
+                case 0: myImage.sprite = sprites_for_fields[0]; break; 
+                case 1: myImage.sprite = sprites_for_fields[1]; break;
             }
             foreach (var fields in game_elements)
             {
                 if (fields.name == button.name)
                 {
-                    position_button = counter;
+                    positionButton = counter;
                 }
                 counter++;
             }
-            marked_space.RemoveAt(position_button);
-            marked_space.Insert(position_button,Player);
+            _markedSpace.RemoveAt(positionButton);
+            _markedSpace.Insert(positionButton,Player);
             button.interactable = false;
             WinCheck();
-            player_turn = false;
-            state_move_PC = true;
+            s_playerTurn = false;
         }
     }
     
     public void WinCheck()
     {
-        int win_variant1 = marked_space[0] + marked_space[1] + marked_space[2];
-        int win_variant2 = marked_space[3] + marked_space[4] + marked_space[5];
-        int win_variant3 = marked_space[6] + marked_space[7] + marked_space[8];
-        int win_variant4 = marked_space[0] + marked_space[4] + marked_space[8];
-        int win_variant5 = marked_space[2] + marked_space[4] + marked_space[6];
-        int win_variant6 = marked_space[0] + marked_space[3] + marked_space[6];
-        int win_variant7 = marked_space[1] + marked_space[4] + marked_space[7];
-        int win_variant8 = marked_space[2] + marked_space[5] + marked_space[8];
+        int winVariant1 = _markedSpace[0] + _markedSpace[1] + _markedSpace[2];
+        int winVariant2 = _markedSpace[3] + _markedSpace[4] + _markedSpace[5];
+        int winVariant3 = _markedSpace[6] + _markedSpace[7] + _markedSpace[8];
+        int winVariant4 = _markedSpace[0] + _markedSpace[4] + _markedSpace[8];
+        int winVariant5 = _markedSpace[2] + _markedSpace[4] + _markedSpace[6];
+        int winVariant6 = _markedSpace[0] + _markedSpace[3] + _markedSpace[6];
+        int winVariant7 = _markedSpace[1] + _markedSpace[4] + _markedSpace[7];
+        int winVariant8 = _markedSpace[2] + _markedSpace[5] + _markedSpace[8];
 
-        var win_variants = new[]
+        var winVariants = new[]
         {
-            win_variant1, win_variant2, win_variant3, win_variant4, win_variant5, win_variant6, win_variant7,
-            win_variant8
+            winVariant1, winVariant2, winVariant3, winVariant4, winVariant5, winVariant6, winVariant7,
+            winVariant8
         };
-        for (int i = 0; i < win_variants.Length; i++)
+        for (int i = 0; i < winVariants.Length; i++)
         {
-            if (win_variants[i] == 3*Player)
+            if (winVariants[i] == _CountFieldsForWin*Player)
             {
                 Debug.Log("Player won");
                 curtain.SetActive(true);
-                state_move_PC = false;
-                GameUI.instance_UI.OpenGUI(true);
-                victory_status = true;
-                is_draw = false;
+                s_playerTurn = false;
+                _gameOver = true;
+                game_ui.OpenGUI(true);
+                s_victoryStatus = true;
+                IsDraw = false;
                 break;
             }
 
-            if (win_variants[i] == 3 * PC)
+            if (winVariants[i] == _CountFieldsForWin * s_pc)
             {
                 Debug.Log("PC won");
                 curtain.SetActive(true);
-                GameUI.instance_UI.OpenGUI(false);
-                victory_status = true;
-                is_draw = false;
+                game_ui.OpenGUI(false);
+                s_victoryStatus = true;
+                IsDraw = false;
                 break;
             }
         }
-        DrawCheck(victory_status);
+        DrawCheck(s_victoryStatus);
     }
 
-    public void DrawCheck(bool victory_status)
+    private void DrawCheck(bool victoryStatus)
     {
-        int counter_marked_fields = 0;
-        foreach (var marked_fields in marked_space)
+        int counterMarkedFields = 0;
+        foreach (var markedFields in _markedSpace)
         {
-            if (marked_fields != -20)
+            if (markedFields != _NumberToWriteForFields)
             {
-                counter_marked_fields++;
+                counterMarkedFields++;
             }
         }
 
-        if (counter_marked_fields == 9 && victory_status == false)
+        if (counterMarkedFields == _CountGameFields && victoryStatus == false)
         {
             Debug.Log("Draw");
-            is_draw = true;
-            GameUI.instance_UI.OpenGUI(false);
-            player_turn = false;
-            state_move_PC = false;
+            IsDraw = true;
+            game_ui.OpenGUI(false);
+            s_playerTurn = false;
         }
     }
-    
-    void FixedUpdate()
+
+    private void FixedUpdate()
     {
-        if(player_turn == false)
-            PCMove(state_move_PC);
+        if(s_playerTurn == false)
+            PCMove(s_playerTurn);
     }
 }

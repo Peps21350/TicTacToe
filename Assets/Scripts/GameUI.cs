@@ -4,30 +4,23 @@ using UnityEngine;
 
 public class GameUI : MonoBehaviour
 {
-
-    public static GameUI instance_UI = null;
-    private Rect windowRect = new Rect((Screen.width - 400) / 2, (Screen.height - 600) / 2, 400, 600);
-    private bool show = false;
-   
-    private bool win = false;
-
+    private const int _WindthWindowGameUI = 400; 
+    private const int _HeightWindowGameUI = 600; 
+    private Rect _windowRect = new Rect((Screen.width - _WindthWindowGameUI) / 2, (Screen.height - _HeightWindowGameUI) / 2, _WindthWindowGameUI, _HeightWindowGameUI);
+    private bool _show = false;
+    private bool _win = false;
     public GUIStyle[] labelStyle;
-
-    private void Start()
-    {
-        if (instance_UI == null)
-            instance_UI = this;
-    }
+    
 
     void OnGUI()
     {
-        if(show && !win)
+        if(_show && !_win)
         {
-            windowRect = GUI.Window(0, windowRect, DialogWindow, ""); 
+            _windowRect = GUI.Window(0, _windowRect, DialogWindow, ""); 
         }
-        if (show && win) 
+        if (_show && _win) 
         {
-            windowRect = GUI.Window(1, windowRect, DialogWindow, ""); 
+            _windowRect = GUI.Window(1, _windowRect, DialogWindow, ""); 
         }
     }
     
@@ -43,33 +36,33 @@ public class GameUI : MonoBehaviour
         string text = windowID == 1 ? "New game" : "Restart";
 
         
-        if (GameMechanics.is_draw == true)
+        if (GameMechanics.IsDraw == true)
         {
-            GUI.Label(new Rect(5, 5, windowRect.width, 360), "DRAW", NewGuiStyle());
+            GUI.Label(new Rect(5, 5, _windowRect.width, 360), "DRAW", NewGuiStyle());
         }
         else
         {
-            GUI.Label(new Rect(5, 5, windowRect.width, 360),"",labelStyle[windowID]);
+            GUI.Label(new Rect(5, 5, _windowRect.width, 360),"",labelStyle[windowID]);
         }
         
-        if (GUI.Button(new Rect(5, 380, windowRect.width - 10, 70), text, NewGuiStyle()))
+        if (GUI.Button(new Rect(5, 380, _windowRect.width - 10, 70), text, NewGuiStyle()))
         {
-            GameMechanics.is_restart = true;
-            SceneManager.LoadScene("SampleScene");
-            show = false;
+            GameMechanics.IsRestart = true;
+            SceneManager.LoadScene("GameScene");
+            _show = false;
         }
         
-        if (GUI.Button(new Rect(5, 460, windowRect.width - 10, 70), "Exit to menu", NewGuiStyle()))
+        if (GUI.Button(new Rect(5, 460, _windowRect.width - 10, 70), "Exit to menu", NewGuiStyle()))
         {
-            SceneManager.LoadScene("SampleScene");
-            show = false;
+            SceneManager.LoadScene("GameScene");
+            _show = false;
         }
     }
     
     public void OpenGUI( bool win)
     {
-        show = true;
-        this.win = win;
+        _show = true;
+        this._win = win;
     }
     
 }
